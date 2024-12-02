@@ -1,5 +1,10 @@
 {
     "python.analysis.extraPaths": [
         "./dashboards_service"
-    ]
+    ],
+    "python.testing.pytestArgs": [
+        "shoppingCart_service"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

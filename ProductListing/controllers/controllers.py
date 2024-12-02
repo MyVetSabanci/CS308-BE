@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status, Request
 import uuid
 from sqlalchemy.orm import Session
 from typing import List
-from models.models import Product, ProductCreate, ProductUpdate
-from services.services import ProductService
-from dbContext import get_db  # This dependency function provides the database session
+from ProductListing.models.models import Product, ProductCreate, ProductUpdate, ProductDB
+from ProductListing.services.services import ProductService
+from ProductListing.dbContext import get_db  # This dependency function provides the database session
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -113,3 +113,4 @@ async def search_products(request: Request, db: Session = Depends(get_db)):
     service = ProductService(db)
     return service.search_product_by_name_description(query)
     # Query the database for matching products
+

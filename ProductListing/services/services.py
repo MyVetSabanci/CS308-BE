@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models.models import ProductDB, ProductCreate, ProductUpdate, ReviewDB, ProductPopularity 
+from ProductListing.models.models import ProductDB, ProductCreate, ProductUpdate, Review, ProductPopularity 
 from typing import List, Optional
 import uuid
 from fastapi import Path
@@ -20,24 +20,16 @@ class ProductService:
         return self.db.query(ProductDB).filter(ProductDB.product_id == product_id).first()
 
     def create_product(self, product_data: ProductCreate) -> ProductDB:
-        # Ensure product_id is not set manually; it will be auto-generated
-        product_data_dict = product_data.dict()
         
-        # Create a new ProductDB instance without product_id
-        new_product = ProductDB(**product_data_dict)
-
+        product = ProductDB(**product_data.dict())
         try:
-            # Add and commit the new product
+            new_product = ProductDB(**product.dict())
             self.db.add(new_product)
             self.db.commit()
             self.db.refresh(new_product)
             return new_product
-
-        except IntegrityError as e:
-            self.db.rollback()  # Roll back in case of error to prevent partial commit
-            if "UNIQUE constraint failed" in str(e.orig):
-                raise ValueError("A product with this serial number already exists.")
-            raise ValueError("An error occurred while creating the product.") from e
+        except Exception as e:
+            raise ValueError(f"Error creating product: {e}")
 
 
 
@@ -106,11 +98,11 @@ class ProductService:
             db.query(
                 ProductDB.product_id,
                 (func.sum(ProductDB.item_sold) * 0.5 +       # Weight for sales
-                func.avg(ReviewDB.rating) * 0.3 +             # Weight for rating
-                func.count(ReviewDB.review_id) * 0.2          # Weight for review count
+                func.avg(Review.rating) * 0.3 +             # Weight for rating
+                func.count(Review.review_id) * 0.2          # Weight for review count
                 ).label("popularity_score")
             )
-            .outerjoin(ReviewDB, ReviewDB.product_id == ProductDB.product_id)
+            .outerjoin(Review, Review.product_id == ProductDB.product_id)
             .group_by(ProductDB.product_id)
             .all()
         )
@@ -133,14 +125,18 @@ class ProductService:
         if not product:
             return None
 
-        # Only update fields that were explicitly provided in the request
-        for key, value in product_data.dict(exclude_unset=True).items():
-            if(value is not None):
+        # Convert product_data to a Pydantic model if it's a dictionary
+        if isinstance(product_data, dict):
+            product_data = ProductUpdate(**product_data)
+
+        # Dynamically update fields provided in the request
+        for key, value in product_data.model_dump(exclude_unset=True).items():
+            if value is not None and hasattr(product, key):  # Check if the attribute exists
                 setattr(product, key, value)  # Dynamically set attribute
 
         # Commit changes to the database
         self.db.commit()
-        self.db.refresh(product)
+        self.db.refresh(product)  # Refresh the product instance with updated values
         return product
 
 

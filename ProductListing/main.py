@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from controllers.controllers import router as product_router
+from ProductListing.controllers.controllers import router as product_router
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
